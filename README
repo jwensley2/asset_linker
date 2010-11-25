@@ -1,0 +1,49 @@
+------------------------------
+- Requirements
+------------------------------
+ExpressionEngine 2.x
+PHP 5+
+JavaScriptPacker (included) - Needed for minification of Javascript files.
+------------------------------
+- Parameters
+------------------------------
+type = js/css (defaults to css)
+assets(required) = '|' delimited list of asset file names
+asset_dir(required) = relative path from the root to the directory where your assets are
+cache_name = a name for the cached file
+output = tag/code/disable (defaults to tag) Tag outputs a link/script tag to the cache file, code outputs the combined and minified code and disable outputs tags linking to the original files
+minify = on/off (defaults to on)
+gzip = on/off (defaults to off)
+expires = The number of hours to set the 'Expires' header to
+
+------------------------------
+- Example Usage
+------------------------------
+There are 2 ways to use this plugin
+
+The first way is to put the template tag into your <head> like:
+{exp:asset_linker type="js" assets="jquery|cufon|Calibri.font|slideshow|common" asset_dir="/assets/js" cache_name="scripts"}
+{exp:asset_linker type="css" assets="reset|960|text|master" asset_dir="/assets/css" cache_name="home"}
+
+-- Example 2 --
+
+The second option is to put the tags into a template which you then link to:
+
+in your template
+<link rel="stylesheet" type="text/css" media="all" href="/index.php/site/styles/" />
+
+in 'site/styles' CSS template
+{exp:asset_linker type="css" assets="reset|960|text|master" asset_dir="/assets/css" cache_name="home" output="code"}
+
+-- Notes --
+
+The second option lets you use ExpressionEngine's output system to have everything gzipped and use the page cache but experienced lower performance in my test and is not recommended for most cases.
+
+------------------------------
+- Changelog
+------------------------------
+1.2 - Added expires parameter
+	- Do some extra checks to make sure the cache dir is writable
+1.1 - Added output="disable" option (Thanks to Kevin Smith)
+    - Don't add the gzip php code if output="code"
+1.0 - Initial Release

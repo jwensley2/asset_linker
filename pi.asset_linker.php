@@ -8,7 +8,7 @@
 
 $plugin_info = array(
   'pi_name' => 'Asset Linker',
-  'pi_version' =>'1.0',
+  'pi_version' =>'1.2',
   'pi_author' =>'Joseph Wensley',
   'pi_author_url' => 'http://josephwensley.com/',
   'pi_description' => 'Links and caches CSS and JS files',
@@ -34,6 +34,7 @@ class Asset_linker {
 		$assets		= $this->EE->TMPL->fetch_param('assets');
 		$asset_dir	= $this->EE->TMPL->fetch_param('asset_dir');
 		$cache_name	= $this->EE->TMPL->fetch_param('cache_name');
+		$expires	= $this->EE->TMPL->fetch_param('expires');
 		
 		switch(strtolower($this->EE->TMPL->fetch_param('minify'))){
 			case 'off':
@@ -80,6 +81,10 @@ class Asset_linker {
 				break;
 		}
 		
+		// Check if expire time is actually a number
+		if(!is_numeric($expires)){
+			$expires = 24;
+		}
 		
 		if(!$asset_dir){
 			$this->EE->TMPL->log_item("Asset Linker: No asset directory specified");
@@ -99,11 +104,13 @@ class Asset_linker {
 			}else{
 				$cache_dir = $asset_dir.'cache/';
 				$cache_dir_url = $asset_dir_url.'cache/';
-				if(!is_dir($cache_dir) && !mkdir($cache_dir)){
+				if(!is_dir($cache_dir) && !mkdir($cache_dir, DIR_READ_MODE)){
 					$cache_dir = $asset_dir;
 					$cache_dir_url = $asset_dir_url;
-				}else{
-					chmod($cache_dir, 0777);
+				}
+				
+				if(is_dir($cache_dir) && !is_writable($cache_dir)){
+					chmod($cache_dir, DIR_WRITE_MODE);
 				}
 			}
 		}
@@ -151,8 +158,8 @@ class Asset_linker {
 		
 		$cache_status = $this->_check_cache($assets_array, $cache_file);
 		
-		if($cache_status === false){
-			$this->_rebuild_cache($assets_array, $cache_file, $asset_type, $minify, $gzip);
+		if($cache_status === FALSE){
+			$this->_rebuild_cache($assets_array, $cache_file, $asset_type, $minify, $gzip, $expires);
 		}
 		
 		// Build the html tag
@@ -208,12 +215,12 @@ class Asset_linker {
 	 * @return void
 	 * @author Joseph Wensley
 	 */
-	function _rebuild_cache($assets_array, $cache_file, $asset_type, $minify, $gzip)
+	function _rebuild_cache($assets_array, $cache_file, $asset_type, $minify, $gzip, $expires)
 	{
 		$modified = gmdate('r');
 		$cache_handle = fopen($cache_file, 'a');
 		flock($cache_handle, LOCK_EX);
-		ftruncate($cache_handle, 0);
+		ftruncate($cache_handle, 0); // Erase everything in the file
 		
 		$first = TRUE;
 		if($gzip){
@@ -223,7 +230,7 @@ class Asset_linker {
 					exit;
 				}
 				
-				\$expires = 60 * 60 * 24 * 1;
+				\$expires = 60 * 60 * %s;
 				
 				header('Cache-Control: must-revalidate');
 				header('Last-Modified: %s');
@@ -233,12 +240,12 @@ class Asset_linker {
 			?>";
 			
 			if($asset_type === 'css'){
-				$header = sprintf($header, time(), $modified, 'css');
+				$header = sprintf($header, time(), $expires, $modified, 'css');
 			}elseif($asset_type === 'js'){
-				$header = sprintf($header, time(), $modified, 'javascript');
+				$header = sprintf($header, time(), $expires, $modified, 'javascript');
 			}
 			
-			fwrite($cache_handle, $header);
+			fwrite($cache_handle, $header); // Write the header to the file
 		}
 		
 		foreach ($assets_array as $asset) {
@@ -249,17 +256,18 @@ class Asset_linker {
 
 				if($first){
 					$data = "/*********** {$asset['filename']} **********/\n".$data;
-					$first = false;
+					$first = FALSE;
 				}else{
 					$data = "\n\n/*********** {$asset['filename']} **********/\n".$data;
 				}
 
-				fwrite($cache_handle, $data);
+				fwrite($cache_handle, $data); // Write the last file
 			}
 		}
 		
-		flock($cache_handle, LOCK_UN);
+		flock($cache_handle, LOCK_UN); // Unlock the file
 		fclose($cache_handle);
+		chmod($cache_file, FILE_READ_MODE);
 	}
 	
 	/**
@@ -305,6 +313,7 @@ class Asset_linker {
 			output = tag/code/disable (defaults to tag) Tag outputs a link/script tag to the cache file, code outputs the combined and minified code and disable outputs tags linking to the original files
 			minify = on/off (defaults to on)
 			gzip = on/off (defaults to off)
+			expires = The number of hours to set the 'Expires' header to
 			
 			------------------------------
 			- Example Usage
@@ -332,6 +341,8 @@ class Asset_linker {
 			------------------------------
 			- Changelog
 			------------------------------
+			1.2 - Added expires parameter
+				- Do some extra checks to make sure the cache dir is writable
 			1.1 - Added output="disable" option (Thanks to Kevin Smith)
 			    - Don't add the gzip php code if output="code"
 			1.0 - Initial Release
