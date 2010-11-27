@@ -280,7 +280,7 @@ class Asset_linker {
 	 */
 	function _minify_data($data, $asset_type){
 		if($asset_type == 'css'){
-			$comment_pattern = "/\/\*\*(?:\r|\n|\r\n|.)*?\*\*\//i";
+			$comment_pattern = "/\/\*(?:\r|\n|\r\n|.)*?\*\//i";
 			$data = preg_replace($comment_pattern, '', $data);
 			$data = preg_replace("/(?:\r|\n|\r\n)*/", '', $data);
 		}elseif($asset_type == 'js'){
