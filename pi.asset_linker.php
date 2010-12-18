@@ -341,6 +341,7 @@ class Asset_linker {
 			------------------------------
 			- Changelog
 			------------------------------
+			1.3 - Added support for NSM Addon Updater
 			1.2 - Added expires parameter
 				- Do some extra checks to make sure the cache dir is writable
 			1.1 - Added output="disable" option (Thanks to Kevin Smith)
